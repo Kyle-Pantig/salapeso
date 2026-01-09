@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cookies } from "@/lib/cookies"
+import { useQueryCache } from "@/components/providers/QueryProvider"
 import { MaxWidthLayout } from "./MaxWidthLayout"
 
 interface User {
@@ -36,6 +37,7 @@ export function Header({ onAddGoal }: HeaderProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
+  const { clearCache } = useQueryCache()
   const [user, setUser] = useState<User | null>(null)
   const [mounted, setMounted] = useState(false)
   const isHomePage = pathname === '/'
@@ -47,6 +49,7 @@ export function Header({ onAddGoal }: HeaderProps) {
 
   const handleLogout = () => {
     cookies.clearAuth()
+    clearCache() // Clear React Query cache to prevent stale data
     setUser(null)
     if (isHomePage) {
       // Force page refresh on homepage to update auth state

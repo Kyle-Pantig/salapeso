@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { useGoogleOAuthConfig } from "@/components/providers/GoogleOAuthProvider"
+import { useQueryCache } from "@/components/providers/QueryProvider"
 import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton"
 import { loginSchema, LoginFormData } from "@/validations/users"
 import { Eye, EyeOff, Mail } from 'lucide-react'
@@ -31,6 +32,7 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter()
+  const { clearCache } = useQueryCache()
   const [error, setError] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
@@ -77,6 +79,7 @@ export function LoginForm({
     const data = await authApi.login(formData.email, formData.password)
 
     if (data.success && data.token && data.user) {
+      clearCache() // Clear old user's cached data
       cookies.setAuth(data.token, data.user)
       router.push('/dashboard')
       router.refresh()

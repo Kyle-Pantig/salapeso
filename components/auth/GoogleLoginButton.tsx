@@ -6,6 +6,7 @@ import { useGoogleLogin } from '@react-oauth/google'
 import { Button } from '@/components/ui/button'
 import { authApi } from '@/lib/api'
 import { cookies } from '@/lib/cookies'
+import { useQueryCache } from '@/components/providers/QueryProvider'
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -39,6 +40,7 @@ interface GoogleLoginButtonProps {
 
 export function GoogleLoginButton({ onError, onLoadingChange, disabled, text = 'Continue with Google' }: GoogleLoginButtonProps) {
   const router = useRouter()
+  const { clearCache } = useQueryCache()
   const [loading, setLoading] = useState(false)
 
   const setLoadingState = (state: boolean) => {
@@ -54,6 +56,7 @@ export function GoogleLoginButton({ onError, onLoadingChange, disabled, text = '
         const data = await authApi.google(tokenResponse.access_token)
         
         if (data.success && data.token && data.user) {
+          clearCache() // Clear old user's cached data
           cookies.setAuth(data.token, data.user)
           router.push('/dashboard')
           router.refresh()

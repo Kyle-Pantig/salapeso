@@ -238,7 +238,7 @@ export default function Home() {
               />
             </motion.div>
             <motion.div 
-              className="absolute -top-12 -right-6 md:-top-4 md:right-4 w-28 h-28 md:w-36 md:h-36 pointer-events-none select-none z-50"
+              className="absolute -top-12 -right-3 md:-top-4 md:right-4 w-28 h-28 md:w-36 md:h-36 pointer-events-none select-none z-50"
               animate={{ y: [0, -6, 0] }}
               transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
             >

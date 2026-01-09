@@ -243,7 +243,7 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
     })
   })
   // Verify email
-  .get('/verify-email', async ({ query, set }) => {
+  .get('/verify-email', async ({ query, jwt, set }) => {
     try {
       const { token } = query
 
@@ -272,8 +272,8 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
         return { success: false, error: 'Verification link has expired' }
       }
 
-      // Update user as verified
-      await prisma.user.update({
+      // Update user as verified and get user data
+      const user = await prisma.user.update({
         where: { email: verificationToken.email },
         data: { emailVerified: true }
       })
@@ -284,9 +284,23 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
         data: { used: true }
       })
 
+      // Generate JWT token for auto-login
+      const authToken = await jwt.sign({ 
+        userId: user.id, 
+        email: user.email 
+      })
+
       return { 
         success: true, 
-        message: 'Email verified successfully. You can now log in.' 
+        message: 'Email verified successfully!',
+        token: authToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          provider: user.provider,
+        }
       }
     } catch (error: any) {
       set.status = 500

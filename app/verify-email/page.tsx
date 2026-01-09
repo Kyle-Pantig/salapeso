@@ -1,11 +1,12 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { authApi } from '@/lib/api'
+import { cookies } from '@/lib/cookies'
 import { Button } from '@/components/ui/button'
 import {
   Field,
@@ -16,6 +17,7 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const token = searchParams.get('token')
   
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -38,9 +40,23 @@ function VerifyEmailContent() {
         if (result.success) {
           setStatus('success')
           setMessage(result.message || 'Your email has been verified successfully!')
-          toast.success('Email verified!', {
-            description: 'You can now log in to your account.',
-          })
+          
+          // Auto-login if token and user data are returned
+          if (result.token && result.user) {
+            cookies.setAuth(result.token, result.user)
+            toast.success('Email verified!', {
+              description: 'Redirecting to dashboard...',
+            })
+            // Redirect to dashboard after a short delay
+            setTimeout(() => {
+              router.push('/dashboard')
+              router.refresh()
+            }, 1500)
+          } else {
+            toast.success('Email verified!', {
+              description: 'You can now log in to your account.',
+            })
+          }
         } else {
           setStatus('error')
           setMessage(result.error || 'Failed to verify email')
@@ -58,7 +74,7 @@ function VerifyEmailContent() {
     }
 
     verifyEmail()
-  }, [token])
+  }, [token, router])
 
   return (
     <FieldGroup>
@@ -94,6 +110,10 @@ function VerifyEmailContent() {
             <FieldDescription>
               {message}
             </FieldDescription>
+            <FieldDescription className="flex items-center gap-2 text-primary">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Redirecting to dashboard...
+            </FieldDescription>
           </>
         )}
 
@@ -110,11 +130,11 @@ function VerifyEmailContent() {
         )}
       </div>
 
-      {status !== 'loading' && (
+      {status === 'error' && (
         <Field>
           <Link href="/login">
             <Button className="w-full">
-              {status === 'success' ? 'Go to Log In' : 'Back to Log In'}
+              Back to Log In
             </Button>
           </Link>
         </Field>

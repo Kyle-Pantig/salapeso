@@ -59,6 +59,7 @@ export function useGoal(goalId: string) {
       return result.data as SavingsGoal
     },
     enabled: !!goalId,
+    staleTime: 30 * 1000, // Show cached data for 30 seconds
   })
 }
 

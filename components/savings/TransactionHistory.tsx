@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ArrowUpRight, ArrowDownLeft, History } from 'lucide-react'
+import { ArrowUpRight, ArrowDownLeft, History, Loader2 } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -15,9 +15,10 @@ interface TransactionHistoryProps {
   isOpen: boolean
   onClose: () => void
   goal: SavingsGoal | null
+  isLoadingDetails?: boolean
 }
 
-export function TransactionHistory({ isOpen, onClose, goal }: TransactionHistoryProps) {
+export function TransactionHistory({ isOpen, onClose, goal, isLoadingDetails }: TransactionHistoryProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
@@ -82,7 +83,12 @@ export function TransactionHistory({ isOpen, onClose, goal }: TransactionHistory
 
         {/* Transactions list */}
         <div className="flex-1 overflow-y-auto">
-          {entries.length === 0 ? (
+          {isLoadingDetails && entries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8">
+              <Loader2 className="size-8 animate-spin text-muted-foreground mb-4" />
+              <p className="text-sm text-muted-foreground">Loading transactions...</p>
+            </div>
+          ) : entries.length === 0 ? (
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -142,6 +148,12 @@ export function TransactionHistory({ isOpen, onClose, goal }: TransactionHistory
                   </motion.div>
                 )
               })}
+              {isLoadingDetails && (
+                <div className="flex items-center justify-center p-4 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                  <span className="text-sm">Loading more...</span>
+                </div>
+              )}
             </div>
           )}
         </div>

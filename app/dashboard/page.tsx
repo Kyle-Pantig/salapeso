@@ -116,7 +116,8 @@ export default function Dashboard() {
   }
 
   const openHistory = (goal: SavingsGoal) => {
-    setSelectedGoalId(goal.id)
+    setSelectedGoal(goal) // Show immediately with existing data
+    setSelectedGoalId(goal.id) // Fetch full details in background
     setShowHistory(true)
   }
 
@@ -384,8 +385,10 @@ export default function Dashboard() {
         onClose={() => {
           setShowHistory(false)
           setSelectedGoalId(null)
+          setSelectedGoal(null)
         }}
-        goal={goalDetails || null}
+        goal={goalDetails || selectedGoal}
+        isLoadingDetails={!!selectedGoalId && !goalDetails}
       />
 
       <ScrollToTop />

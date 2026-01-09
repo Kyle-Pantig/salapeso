@@ -87,14 +87,6 @@ export const authApi = {
     api('/auth/resend-verification', { method: 'POST', body: { email } }),
 }
 
-// Users API helpers
-export const usersApi = {
-  getAll: () => api('/users'),
-  getById: (id: string) => api(`/users/${id}`),
-  create: (email: string, name?: string) =>
-    api('/users', { method: 'POST', body: { email, name } }),
-}
-
 // Savings API helpers
 export const savingsApi = {
   // Wallets

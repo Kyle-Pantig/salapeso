@@ -21,7 +21,51 @@ export const metadata: Metadata = {
     template: "%s - SalaPeso",
   },
   description: "Simple and intuitive savings tracker to help you reach your financial goals. Track multiple savings goals, monitor progress, and achieve your dreams.",
-  keywords: ["savings tracker", "personal finance", "money management", "savings goals", "financial planning", "budget tracker"],
+  keywords: [
+    "SalaPeso",
+    "SalaPeso app",
+    "SalaPeso savings",
+    "SalaPeso money",
+    "SalaPeso finance",
+    "SalaPeso budget",
+    "SalaPeso goals",
+    "SalaPeso planning",
+    "SalaPeso tracker",
+    "SalaPeso savings tracker",
+    "SalaPeso money tracker",
+    "SalaPeso finance tracker",
+    "SalaPeso budget tracker",
+    "SalaPeso goals tracker",
+    "SalaPeso planning tracker",
+    "SalaPeso tracker",
+    "SalaPeso savings tracker",
+    "SalaPeso money tracker",
+    "savings tracker",
+    "personal finance",
+    "money management",
+    "savings goals",
+    "financial planning",
+    "budget tracker",
+    "Philippine savings app",
+    "ipon tracker",
+    "GCash savings",
+    "Maya savings",
+    "e-wallet tracker",
+    "bank savings tracker",
+    "peso savings",
+    "money tracker Philippines",
+    "alkansya app",
+    "ipon challenge",
+    "52 week challenge",
+    "financial goals",
+    "expense tracker",
+    "savings jar",
+    "digital piggy bank",
+    "track savings Philippines",
+    "BPI savings",
+    "BDO savings",
+    "unionbank tracker",
+  ],
   authors: [{ name: "Kyle Pantig", url: "https://www.kylepantig.site" }],
   creator: "Kyle Pantig",
   openGraph: {
@@ -49,6 +93,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="apple-mobile-web-app-title" content="SalaPeso" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

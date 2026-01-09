@@ -121,37 +121,7 @@ USING (
 );
 
 -- ============================================
--- 5. ACCOUNTS TABLE (OAuth accounts)
--- ============================================
-ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
-
--- Users can only view their own accounts
-CREATE POLICY "Users can view own accounts"
-ON accounts FOR SELECT
-USING (auth.uid()::text = "userId" OR auth.role() = 'service_role');
-
--- Only backend can manage accounts
-CREATE POLICY "Service role can manage accounts"
-ON accounts FOR ALL
-USING (auth.role() = 'service_role');
-
--- ============================================
--- 6. SESSIONS TABLE
--- ============================================
-ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
-
--- Users can only view their own sessions
-CREATE POLICY "Users can view own sessions"
-ON sessions FOR SELECT
-USING (auth.uid()::text = "userId" OR auth.role() = 'service_role');
-
--- Only backend can manage sessions
-CREATE POLICY "Service role can manage sessions"
-ON sessions FOR ALL
-USING (auth.role() = 'service_role');
-
--- ============================================
--- 7. PASSWORD_RESET_TOKENS TABLE (Backend only)
+-- 5. PASSWORD_RESET_TOKENS TABLE (Backend only)
 -- ============================================
 ALTER TABLE password_reset_tokens ENABLE ROW LEVEL SECURITY;
 
@@ -161,23 +131,13 @@ ON password_reset_tokens FOR ALL
 USING (auth.role() = 'service_role');
 
 -- ============================================
--- 8. EMAIL_VERIFICATION_TOKENS TABLE (Backend only)
+-- 6. EMAIL_VERIFICATION_TOKENS TABLE (Backend only)
 -- ============================================
 ALTER TABLE email_verification_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Only backend can access email verification tokens
 CREATE POLICY "Service role only for email tokens"
 ON email_verification_tokens FOR ALL
-USING (auth.role() = 'service_role');
-
--- ============================================
--- 9. VERIFICATION_TOKENS TABLE (Backend only)
--- ============================================
-ALTER TABLE verification_tokens ENABLE ROW LEVEL SECURITY;
-
--- Only backend can access verification tokens
-CREATE POLICY "Service role only for verification tokens"
-ON verification_tokens FOR ALL
 USING (auth.role() = 'service_role');
 
 -- ============================================
@@ -194,8 +154,6 @@ GRANT SELECT ON wallets TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON users TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON savings_goals TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON savings_entries TO authenticated;
-GRANT SELECT ON accounts TO authenticated;
-GRANT SELECT ON sessions TO authenticated;
 
 -- ============================================
 -- DONE! 🔒

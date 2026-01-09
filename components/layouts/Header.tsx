@@ -8,6 +8,7 @@ import { LogOut, Plus, KeyRound, Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,7 +106,14 @@ export function Header({ onAddGoal }: HeaderProps) {
               </div>
             )}
 
-            {user ? (
+            {/* Auth Section with Loading State */}
+            {!mounted ? (
+              // Skeleton while checking auth
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-20 rounded-full" />
+                <Skeleton className="size-9 rounded-full" />
+              </div>
+            ) : user ? (
               <>
                 {/* Dashboard link - only when not on dashboard */}
                 {!onAddGoal && (
@@ -169,7 +177,7 @@ export function Header({ onAddGoal }: HeaderProps) {
                       }} 
                       className="cursor-pointer"
                     >
-                      {mounted && theme === 'dark' ? (
+                      {theme === 'dark' ? (
                         <>
                           <Sun className="mr-2 size-4" />
                           Light Theme

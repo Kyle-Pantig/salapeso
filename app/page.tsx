@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { AnimatedButtonGroup } from "@/components/ui/animated-button-group"
 import { Header, MaxWidthLayout } from "@/components/layouts"
 import { ArrowRight, PiggyBank, Target, TrendingUp, BarChart3 } from "lucide-react"
@@ -25,10 +26,12 @@ const staggerContainer = {
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     const token = cookies.getToken()
     setIsAuthenticated(!!token)
+    setMounted(true)
   }, [])
   return (
     <>
@@ -100,7 +103,13 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="relative z-10 flex flex-col items-center gap-4"
             >
-              {isAuthenticated ? (
+              {!mounted ? (
+                // Skeleton while checking auth
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-36 rounded-full" />
+                  <Skeleton className="h-12 w-40 rounded-full" />
+                </div>
+              ) : isAuthenticated ? (
                 <Link href="/dashboard">
                   <Button size="lg" className="rounded-full gap-2">
                     Go to Dashboard
@@ -249,21 +258,33 @@ export default function Home() {
                 className="object-contain"
               />
             </motion.div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 relative z-10">
-              {isAuthenticated ? "Ready to reach your goals?" : "Start tracking your savings today"}
-            </h2>
-            <p className="text-primary-foreground/80 text-lg mb-8 max-w-xl mx-auto relative z-10">
-              {isAuthenticated 
-                ? "Head to your dashboard and keep tracking your savings progress."
-                : "It's free, simple, and helps you stay motivated to reach your goals."
-              }
-            </p>
-            <Link href={isAuthenticated ? "/dashboard" : "/signup"} className="relative z-10">
-              <Button size="lg" variant="secondary" className="gap-2">
-                {isAuthenticated ? "Go to Dashboard" : "Create Free Account"}
-                <ArrowRight className="size-4" />
-              </Button>
-            </Link>
+            {!mounted ? (
+              <Skeleton className="h-10 w-80 mx-auto mb-4 bg-primary-foreground/20 relative z-10" />
+            ) : (
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 relative z-10">
+                {isAuthenticated ? "Ready to reach your goals?" : "Start tracking your savings today"}
+              </h2>
+            )}
+            {!mounted ? (
+              <Skeleton className="h-6 w-96 mx-auto mb-8 bg-primary-foreground/20 relative z-10" />
+            ) : (
+              <p className="text-primary-foreground/80 text-lg mb-8 max-w-xl mx-auto relative z-10">
+                {isAuthenticated 
+                  ? "Head to your dashboard and keep tracking your savings progress."
+                  : "It's free, simple, and helps you stay motivated to reach your goals."
+                }
+              </p>
+            )}
+            {!mounted ? (
+              <Skeleton className="h-12 w-48 mx-auto rounded-full bg-primary-foreground/20 relative z-10" />
+            ) : (
+              <Link href={isAuthenticated ? "/dashboard" : "/signup"} className="relative z-10">
+                <Button size="lg" variant="secondary" className="gap-2">
+                  {isAuthenticated ? "Go to Dashboard" : "Create Free Account"}
+                  <ArrowRight className="size-4" />
+                </Button>
+              </Link>
+            )}
           </motion.div>
         </MaxWidthLayout>
       </section>

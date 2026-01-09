@@ -9,7 +9,10 @@ const PORT = parseInt(process.env.PORT || '3001')
 
 const app = new Elysia()
     .use(cors({
-        origin: ['http://localhost:3000'],
+        origin: [
+            'http://localhost:3000',
+            process.env.FRONTEND_URL || 'https://salapeso.vercel.app'
+        ].filter(Boolean) as string[],
         credentials: true
     }))
     .use(authRoutes)

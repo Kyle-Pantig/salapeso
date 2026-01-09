@@ -2,6 +2,7 @@ import { Elysia } from 'elysia'
 import { cors } from '@elysiajs/cors'
 import { authRoutes } from './lib/auth'
 import { savingsRoutes } from './lib/savings'
+import { supportRoutes } from './lib/support'
 
 const PORT = parseInt(process.env.PORT || '3001')
 
@@ -24,6 +25,8 @@ const app = new Elysia()
     .use(authRoutes)
     // Savings routes - all protected, users can only access their own data
     .use(savingsRoutes)
+    // Support heart routes - public read, authenticated write
+    .use(supportRoutes)
     .listen(PORT)
 
 console.log(`🦊 Elysia is running at http://localhost:${PORT}`)

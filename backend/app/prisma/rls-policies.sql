@@ -141,6 +141,26 @@ ON email_verification_tokens FOR ALL
 USING (auth.role() = 'service_role');
 
 -- ============================================
+-- 7. SUPPORT_HEARTS TABLE
+-- ============================================
+ALTER TABLE support_hearts ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can view support hearts (for counting)
+CREATE POLICY "Anyone can view support hearts"
+ON support_hearts FOR SELECT
+USING (true);
+
+-- Authenticated users can only insert their own heart
+CREATE POLICY "Users can insert own heart"
+ON support_hearts FOR INSERT
+WITH CHECK (auth.uid()::text = "userId" OR auth.role() = 'service_role');
+
+-- Users can only delete their own heart
+CREATE POLICY "Users can delete own heart"
+ON support_hearts FOR DELETE
+USING (auth.uid()::text = "userId" OR auth.role() = 'service_role');
+
+-- ============================================
 -- GRANT PERMISSIONS
 -- ============================================
 
@@ -149,6 +169,12 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated;
 
 -- Grant select on wallets to everyone (public data)
 GRANT SELECT ON wallets TO anon, authenticated;
+
+-- Grant select on support_hearts to everyone (for counting)
+GRANT SELECT ON support_hearts TO anon, authenticated;
+
+-- Grant insert/delete on support_hearts to authenticated users
+GRANT INSERT, DELETE ON support_hearts TO authenticated;
 
 -- Grant full access to authenticated users on their data
 GRANT SELECT, INSERT, UPDATE, DELETE ON users TO authenticated;

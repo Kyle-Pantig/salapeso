@@ -22,6 +22,7 @@ model User {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   savingsGoals      SavingsGoal[]
+  supportHeart      SupportHeart?
 
   @@map("users")
 }
@@ -106,4 +107,15 @@ model SavingsEntry {
   savingsGoal SavingsGoal @relation(fields: [savingsGoalId], references: [id], onDelete: Cascade)
 
   @@map("savings_entries")
+}
+
+// Support/heart reactions from authenticated users
+model SupportHeart {
+  id        String   @id @default(cuid())
+  userId    String   @unique // Only authenticated users can heart
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("support_hearts")
 }

@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AnimatedButtonGroup } from "@/components/ui/animated-button-group"
+import { SupportHeartButton } from "@/components/support-heart-button"
 import { Header, MaxWidthLayout } from "@/components/layouts"
 import { ArrowRight, PiggyBank, Target, TrendingUp, BarChart3 } from "lucide-react"
 import { cookies } from "@/lib/cookies"
@@ -125,14 +126,17 @@ export default function Home() {
                 />
               )}
               
-              <a 
-                href="https://www.kylepantig.site" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-muted/80 transition-colors"
-              >
-                Proudly developed by <span className="font-bold ml-1">Kyle Pantig</span>
-              </a>
+              <div className="flex items-center gap-2">
+                <a 
+                  href="https://www.kylepantig.site" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs hover:bg-muted/80 transition-colors"
+                >
+                  Proudly developed by <span className="font-bold ml-1">Kyle Pantig</span>
+                </a>
+                <SupportHeartButton />
+              </div>
             </motion.div>
           </motion.div>
         </MaxWidthLayout>

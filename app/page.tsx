@@ -62,7 +62,7 @@ export default function Home() {
                 {" "}Savings
                 {/* Mascot next to Savings */}
                 <motion.span
-                  className="absolute -right-16 sm:-right-24 md:-right-48 lg:-right-56 -top-20 sm:-top-24 md:-top-28 lg:-top-32 pointer-events-none"
+                  className="absolute -right-10 sm:-right-24 md:-right-48 lg:-right-56 -top-20 sm:-top-24 md:-top-28 lg:-top-32 pointer-events-none"
                   initial={{ opacity: 0, scale: 0.5, x: -20 }}
                   animate={{ opacity: 1, scale: 1, x: 0 }}
                   transition={{ duration: 0.6, delay: 0.4 }}

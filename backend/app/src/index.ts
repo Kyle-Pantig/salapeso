@@ -1,11 +1,102 @@
 import { Elysia } from 'elysia'
 import { cors } from '@elysiajs/cors'
+import { jwt } from '@elysiajs/jwt'
 import prisma from './lib/prisma'
-import { supabase, supabaseAdmin } from './lib/supabase'
 import { authRoutes } from './lib/auth'
 import { savingsRoutes } from './lib/savings'
 
 const PORT = parseInt(process.env.PORT || '3001')
+
+// Helper to verify JWT and get user
+async function verifyAuth(headers: Record<string, string | undefined>, jwtVerify: (token: string) => Promise<any>) {
+    const authHeader = headers.authorization
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return { user: null, error: 'No token provided' }
+    }
+
+    const token = authHeader.split(' ')[1]
+    const payload = await jwtVerify(token)
+
+    if (!payload) {
+        return { user: null, error: 'Invalid token' }
+    }
+
+    const user = await prisma.user.findUnique({
+        where: { id: payload.userId as string },
+        select: {
+            id: true,
+            email: true,
+            name: true,
+            image: true,
+            // NEVER select password!
+        }
+    })
+
+    if (!user) {
+        return { user: null, error: 'User not found' }
+    }
+
+    return { user, error: null }
+}
+
+// Protected user routes
+const userRoutes = new Elysia({ prefix: '/users' })
+    .use(
+        jwt({
+            name: 'jwt',
+            secret: process.env.JWT_SECRET || 'your-super-secret-key-change-in-production',
+        })
+    )
+    .get('/', async ({ headers, jwt: jwtInstance, set }) => {
+        const { user, error } = await verifyAuth(headers, jwtInstance.verify)
+        if (error || !user) {
+            set.status = 401
+            return { success: false, error: error || 'Unauthorized' }
+        }
+        try {
+            const users = await prisma.user.findMany({
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    image: true,
+                    createdAt: true,
+                    // NEVER include password!
+                }
+            })
+            return { success: true, data: users }
+        } catch (err: any) {
+            return { success: false, error: err.message }
+        }
+    })
+    .get('/:id', async ({ params: { id }, headers, jwt: jwtInstance, set }) => {
+        const { user, error } = await verifyAuth(headers, jwtInstance.verify)
+        if (error || !user) {
+            set.status = 401
+            return { success: false, error: error || 'Unauthorized' }
+        }
+        try {
+            const foundUser = await prisma.user.findUnique({
+                where: { id },
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    image: true,
+                    createdAt: true,
+                    // NEVER include password!
+                }
+            })
+            if (!foundUser) {
+                set.status = 404
+                return { success: false, error: 'User not found' }
+            }
+            return { success: true, data: foundUser }
+        } catch (err: any) {
+            return { success: false, error: err.message }
+        }
+    })
 
 const app = new Elysia()
     .use(cors({
@@ -15,106 +106,19 @@ const app = new Elysia()
         ].filter(Boolean) as string[],
         credentials: true
     }))
+    // Public routes
+    .get('/health', () => ({ 
+        success: true, 
+        message: 'API is running',
+        timestamp: new Date().toISOString()
+    }))
+    // Auth routes (login, signup, etc.)
     .use(authRoutes)
+    // Protected routes
     .use(savingsRoutes)
-    // Prisma routes
-    .get('/users', async () => {
-        try {
-            const users = await prisma.user.findMany()
-            return { success: true, data: users }
-        } catch (error: any) {
-            return { success: false, error: error.message }
-        }
-    })
-    .get('/users/:id', async ({ params: { id } }) => {
-        try {
-            const user = await prisma.user.findUnique({
-                where: { id }
-            })
-            if (!user) {
-                return { success: false, error: 'User not found' }
-            }
-            return { success: true, data: user }
-        } catch (error: any) {
-            return { success: false, error: error.message }
-        }
-    })
-    .post('/users', async ({ body }: any) => {
-        try {
-            const { email, name } = body
-            const user = await prisma.user.create({
-                data: { email, name }
-            })
-            return { success: true, data: user }
-        } catch (error: any) {
-            return { success: false, error: error.message }
-        }
-    })
-    
-    // Supabase routes
-    .get('/supabase/test', async () => {
-        try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .limit(5)
-            
-            if (error) throw error
-            return { success: true, data, source: 'supabase' }
-        } catch (error: any) {
-            return { success: false, error: error.message, source: 'supabase' }
-        }
-    })
-    .get('/supabase/health', async () => {
-        try {
-            const { data, error } = await supabaseAdmin.auth.getSession()
-            return { 
-                success: true, 
-                message: 'Supabase connection successful',
-                connected: !error
-            }
-        } catch (error: any) {
-            return { 
-                success: false, 
-                error: error.message,
-                connected: false
-            }
-        }
-    })
-    
-    // Combined test route
-    .get('/test', async () => {
-        try {
-            // Test Prisma
-            const prismaUsers = await prisma.user.findMany()
-            
-            // Test Supabase
-            const { data: supabaseData, error: supabaseError } = await supabase
-                .from('users')
-                .select('*')
-                .limit(5)
-            
-            return {
-                success: true,
-                prisma: {
-                    connected: true,
-                    usersCount: prismaUsers.length
-                },
-                supabase: {
-                    connected: !supabaseError,
-                    usersCount: supabaseData?.length || 0,
-                    error: supabaseError?.message
-                }
-            }
-        } catch (error: any) {
-            return {
-                success: false,
-                error: error.message
-            }
-        }
-    })
+    .use(userRoutes)
     .listen(PORT)
 
 console.log(`🦊 Elysia is running at http://localhost:${PORT}`)
 console.log(`📊 Prisma: Ready`)
-console.log(`🔐 Supabase: ${process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Configured' : 'Not configured'}`)
+console.log(`🔐 JWT Auth: Enabled`)

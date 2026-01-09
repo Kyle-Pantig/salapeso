@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowUpRight, ArrowDownLeft, History } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -7,38 +8,110 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { TransactionWithWallet } from '@/types/savings'
 import { cn } from '@/lib/utils'
 
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+  }).format(Math.abs(amount))
+}
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  
+  return date.toLocaleDateString('en-PH', {
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+// Separate component for transaction item to properly use hooks
+function TransactionItem({ entry, index, isInitialRender }: { entry: TransactionWithWallet; index: number; isInitialRender: boolean }) {
+  const isDeposit = Number(entry.amount) > 0
+  
+  // Only animate on initial render OR if it's an optimistic temp item
+  const isOptimistic = entry.id.startsWith('temp-')
+  const shouldAnimate = isInitialRender || isOptimistic
+
+  return (
+    <motion.div
+      initial={shouldAnimate ? { opacity: 0, x: -10 } : false}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: shouldAnimate ? index * 0.03 : 0 }}
+      className="flex items-center gap-3 py-2 hover:bg-muted/50 rounded-lg px-2 -mx-2 transition-colors"
+    >
+      {/* Wallet logo */}
+      <div className="relative size-10 flex-shrink-0">
+        <img
+          src={entry.savingsGoal.wallet.logo}
+          alt={entry.savingsGoal.wallet.slug}
+          className="w-full h-full object-contain"
+        />
+      </div>
+      
+      {/* Details */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            'size-5 rounded-full flex items-center justify-center flex-shrink-0',
+            isDeposit 
+              ? 'bg-green-100 text-green-600 dark:bg-green-900/30' 
+              : 'bg-red-100 text-red-600 dark:bg-red-900/30'
+          )}>
+            {isDeposit ? (
+              <ArrowDownLeft className="size-3" />
+            ) : (
+              <ArrowUpRight className="size-3" />
+            )}
+          </div>
+          <span className="text-sm font-medium truncate">
+            {entry.note || (isDeposit ? 'Deposit' : 'Withdrawal')}
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {formatDate(entry.createdAt)}
+        </p>
+      </div>
+      
+      {/* Amount */}
+      <p className={cn(
+        'text-sm font-semibold flex-shrink-0',
+        isDeposit ? 'text-green-600' : 'text-red-600'
+      )}>
+        {isDeposit ? '+' : '-'}{formatCurrency(Number(entry.amount))}
+      </p>
+    </motion.div>
+  )
+}
+
 interface RecentTransactionsProps {
   transactions: TransactionWithWallet[]
   isLoading?: boolean
 }
 
 export function RecentTransactions({ transactions, isLoading }: RecentTransactionsProps) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
-      minimumFractionDigits: 2,
-    }).format(Math.abs(amount))
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
-    
-    return date.toLocaleDateString('en-PH', {
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+  const isFirstRender = useRef(true)
+  
+  // After first render with data, mark as not initial anymore
+  useEffect(() => {
+    if (transactions.length > 0 && isFirstRender.current) {
+      // Small delay to allow initial animations to complete
+      const timer = setTimeout(() => {
+        isFirstRender.current = false
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [transactions])
 
   if (isLoading) {
     return (
@@ -91,59 +164,14 @@ export function RecentTransactions({ transactions, isLoading }: RecentTransactio
         <CardContent className="px-0 py-0">
           <ScrollArea className="h-[500px]">
             <div className="space-y-1 px-4 py-4">
-              {transactions.map((entry, index) => {
-                const isDeposit = Number(entry.amount) > 0
-                return (
-                  <motion.div
-                    key={entry.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                    className="flex items-center gap-3 py-2 hover:bg-muted/50 rounded-lg px-2 -mx-2 transition-colors"
-                  >
-                    {/* Wallet logo */}
-                    <div className="relative size-10 flex-shrink-0">
-                      <img
-                        src={entry.savingsGoal.wallet.logo}
-                        alt={entry.savingsGoal.wallet.slug}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    
-                    {/* Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          'size-5 rounded-full flex items-center justify-center flex-shrink-0',
-                          isDeposit 
-                            ? 'bg-green-100 text-green-600 dark:bg-green-900/30' 
-                            : 'bg-red-100 text-red-600 dark:bg-red-900/30'
-                        )}>
-                          {isDeposit ? (
-                            <ArrowDownLeft className="size-3" />
-                          ) : (
-                            <ArrowUpRight className="size-3" />
-                          )}
-                        </div>
-                        <span className="text-sm font-medium truncate">
-                          {entry.note || (isDeposit ? 'Deposit' : 'Withdrawal')}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(entry.createdAt)}
-                      </p>
-                    </div>
-                    
-                    {/* Amount */}
-                    <p className={cn(
-                      'text-sm font-semibold flex-shrink-0',
-                      isDeposit ? 'text-green-600' : 'text-red-600'
-                    )}>
-                      {isDeposit ? '+' : '-'}{formatCurrency(Number(entry.amount))}
-                    </p>
-                  </motion.div>
-                )
-              })}
+              {transactions.map((entry, index) => (
+                <TransactionItem 
+                  key={entry.id} 
+                  entry={entry} 
+                  index={index} 
+                  isInitialRender={isFirstRender.current}
+                />
+              ))}
             </div>
           </ScrollArea>
         </CardContent>

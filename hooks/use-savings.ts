@@ -351,7 +351,6 @@ export function useAddEntry() {
       const previousGoals = queryClient.getQueryData<SavingsGoal[]>(savingsKeys.goals())
       const previousGoal = queryClient.getQueryData<SavingsGoal>(savingsKeys.goal(goalId))
       const previousSummary = queryClient.getQueryData<SavingsSummary>(savingsKeys.summary())
-      const previousTransactions = queryClient.getQueryData<TransactionWithWallet[]>(savingsKeys.transactionsWithLimit(undefined))
 
       // Optimistically update the goals list
       if (previousGoals) {
@@ -390,28 +389,39 @@ export function useAddEntry() {
         })
       }
 
-      // Optimistically add to recent transactions
-      if (previousTransactions && previousGoals) {
-        const goal = previousGoals.find(g => g.id === goalId)
-        if (goal) {
-          const optimisticTransaction: TransactionWithWallet = {
-            id: `temp-${Date.now()}`,
-            savingsGoalId: goalId,
-            amount: data.amount,
-            note: data.note || null,
-            createdAt: new Date().toISOString(),
-            savingsGoal: {
-              wallet: goal.wallet,
-            },
-          }
-          queryClient.setQueryData<TransactionWithWallet[]>(
-            savingsKeys.transactionsWithLimit(undefined),
-            [optimisticTransaction, ...previousTransactions]
-          )
+      // Optimistically add to recent transactions (update all transaction queries)
+      const goal = previousGoals?.find(g => g.id === goalId)
+      const allTransactionQueries = queryClient.getQueriesData<TransactionWithWallet[]>({
+        queryKey: savingsKeys.transactions(),
+      })
+      
+      // Store all previous transaction states for rollback
+      const previousAllTransactions = allTransactionQueries.map(([key, data]) => ({ key, data }))
+
+      if (goal) {
+        const optimisticTransaction: TransactionWithWallet = {
+          id: `temp-${Date.now()}`,
+          savingsGoalId: goalId,
+          amount: data.amount,
+          note: data.note || null,
+          createdAt: new Date().toISOString(),
+          savingsGoal: {
+            wallet: goal.wallet,
+          },
         }
+        
+        // Update all transaction queries
+        allTransactionQueries.forEach(([key, existingData]) => {
+          if (existingData) {
+            queryClient.setQueryData<TransactionWithWallet[]>(
+              key,
+              [optimisticTransaction, ...existingData]
+            )
+          }
+        })
       }
 
-      return { previousGoals, previousGoal, previousSummary, previousTransactions, goalId }
+      return { previousGoals, previousGoal, previousSummary, previousAllTransactions, goalId }
     },
     onError: (_, __, context) => {
       // Rollback on error
@@ -424,8 +434,11 @@ export function useAddEntry() {
       if (context?.previousSummary) {
         queryClient.setQueryData(savingsKeys.summary(), context.previousSummary)
       }
-      if (context?.previousTransactions) {
-        queryClient.setQueryData(savingsKeys.transactionsWithLimit(undefined), context.previousTransactions)
+      // Rollback all transaction queries
+      if (context?.previousAllTransactions) {
+        context.previousAllTransactions.forEach(({ key, data }) => {
+          queryClient.setQueryData(key, data)
+        })
       }
     },
     onSettled: (_, __, variables) => {

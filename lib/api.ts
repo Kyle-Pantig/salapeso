@@ -136,17 +136,16 @@ export const savingsApi = {
     api(`/savings/transactions${limit ? `?limit=${limit}` : ''}`, { headers: { Authorization: `Bearer ${token}` } }),
 }
 
-
 // Support API helpers
 export const supportApi = {
   // Get count and check if user has hearted
   getSupport: (token?: string) =>
-    api("/support", token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+    api('/support', token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 
   // Toggle heart (requires auth)
   toggleHeart: (token: string) =>
-    api("/support", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+    api('/support', { 
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
     }),
 }

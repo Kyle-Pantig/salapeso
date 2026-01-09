@@ -21,7 +21,7 @@ const getToken = () => cookies.getToken() || ''
 
 // ============ QUERIES ============
 
-// Fetch all wallets
+// Fetch all wallets (static data - cache for long time)
 export function useWallets() {
   return useQuery({
     queryKey: savingsKeys.wallets(),
@@ -30,6 +30,8 @@ export function useWallets() {
       if (!result.success) throw new Error(result.error)
       return result.data as Wallet[]
     },
+    staleTime: 1000 * 60 * 60, // 1 hour - wallets rarely change
+    gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24 hours
   })
 }
 
@@ -44,6 +46,9 @@ export function useGoals() {
       if (!result.success) throw new Error(result.error)
       return result.data as SavingsGoal[]
     },
+    staleTime: 1000 * 30, // 30 seconds
+    gcTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -59,7 +64,9 @@ export function useGoal(goalId: string) {
       return result.data as SavingsGoal
     },
     enabled: !!goalId,
-    staleTime: 30 * 1000, // Show cached data for 30 seconds
+    staleTime: 1000 * 30, // 30 seconds
+    gcTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -74,6 +81,9 @@ export function useSummary() {
       if (!result.success) throw new Error(result.error)
       return result.data as SavingsSummary
     },
+    staleTime: 1000 * 30, // 30 seconds
+    gcTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -88,6 +98,9 @@ export function useTransactions(limit?: number) {
       if (!result.success) throw new Error(result.error)
       return result.data as TransactionWithWallet[]
     },
+    staleTime: 1000 * 30, // 30 seconds
+    gcTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
   })
 }
 

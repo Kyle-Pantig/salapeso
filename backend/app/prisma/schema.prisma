@@ -93,6 +93,8 @@ model SavingsGoal {
   wallet  Wallet         @relation(fields: [walletId], references: [id])
   entries SavingsEntry[]
 
+  @@index([userId])
+  @@index([userId, createdAt])
   @@map("savings_goals")
 }
 
@@ -106,6 +108,8 @@ model SavingsEntry {
 
   savingsGoal SavingsGoal @relation(fields: [savingsGoalId], references: [id], onDelete: Cascade)
 
+  @@index([savingsGoalId])
+  @@index([savingsGoalId, createdAt(sort: Desc)])
   @@map("savings_entries")
 }
 

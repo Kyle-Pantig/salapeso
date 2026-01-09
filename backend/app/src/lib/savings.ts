@@ -272,7 +272,7 @@ export const savingsRoutes = new Elysia({ prefix: '/savings' })
       return { success: false, error: error.message }
     }
   })
-  // Get all transactions across all goals
+  // Get all transactions across all goals (optimized single query)
   .get('/transactions', async ({ headers, jwt: jwtInstance, set, query }) => {
     try {
       const userId = await getUserFromToken(headers.authorization, jwtInstance.verify)
@@ -283,17 +283,11 @@ export const savingsRoutes = new Elysia({ prefix: '/savings' })
 
       const limit = query.limit ? parseInt(query.limit as string) : 20
 
-      // Get all user's goals first
-      const goals = await prisma.savingsGoal.findMany({
-        where: { userId },
-        select: { id: true },
-      })
-
-      const goalIds = goals.map(g => g.id)
-
-      // Get all entries for these goals
+      // Single optimized query using nested where
       const entries = await prisma.savingsEntry.findMany({
-        where: { savingsGoalId: { in: goalIds } },
+        where: {
+          savingsGoal: { userId },
+        },
         include: {
           savingsGoal: {
             include: { wallet: true },

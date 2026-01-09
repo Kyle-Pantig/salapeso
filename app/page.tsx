@@ -235,7 +235,7 @@ export default function Home() {
           >
             {/* Decorative mascot images */}
             <motion.div 
-              className="absolute bottom-2 left-2 md:bottom-4 md:left-8 w-28 h-28 md:w-40 md:h-40 pointer-events-none select-none"
+              className="absolute -bottom-10 left-2 md:bottom-4 md:left-8 w-28 h-28 md:w-40 md:h-40 pointer-events-none select-none"
               animate={{ y: [0, -8, 0], rotate: [0, -3, 0] }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             >
@@ -245,6 +245,8 @@ export default function Home() {
                 fill
                 className="object-contain"
               />
+              {/* Mobile-only shadow */}
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-3 bg-black/20 rounded-full blur-sm md:hidden" />
             </motion.div>
             <motion.div 
               className="absolute -top-12 -right-3 md:-top-4 md:right-4 w-28 h-28 md:w-36 md:h-36 pointer-events-none select-none z-50"

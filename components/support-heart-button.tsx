@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -9,6 +10,11 @@ import confetti from 'canvas-confetti'
 import { supportApi } from '@/lib/api'
 import { cookies } from '@/lib/cookies'
 import { cn } from '@/lib/utils'
+
+interface SupportData {
+  count: number
+  hasHearted: boolean
+}
 
 interface SupportResponse {
   success: boolean
@@ -29,14 +35,83 @@ function formatCount(num: number): string {
   return num.toString()
 }
 
+// Query key for support data
+const supportKeys = {
+  all: ['support'] as const,
+  data: () => [...supportKeys.all, 'data'] as const,
+}
+
 export function SupportHeartButton() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const [count, setCount] = useState(0)
-  const [hasHearted, setHasHearted] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isFetching, setIsFetching] = useState(true)
   const [isAnimating, setIsAnimating] = useState(false)
+
+  // Fetch support data with React Query
+  const { data, isLoading: isFetching } = useQuery({
+    queryKey: supportKeys.data(),
+    queryFn: async (): Promise<SupportData> => {
+      const token = cookies.getToken()
+      const result = await supportApi.getSupport(token || undefined) as SupportResponse
+      if (!result.success) throw new Error(result.error)
+      return {
+        count: result.count ?? 0,
+        hasHearted: result.hasHearted ?? false,
+      }
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    refetchOnWindowFocus: false,
+  })
+
+  const count = data?.count ?? 0
+  const hasHearted = data?.hasHearted ?? false
+
+  // Toggle heart mutation with optimistic update
+  const toggleMutation = useMutation({
+    mutationFn: async () => {
+      const token = cookies.getToken()
+      if (!token) throw new Error('Not authenticated')
+      const result = await supportApi.toggleHeart(token) as SupportResponse
+      if (!result.success) throw new Error(result.error)
+      return result
+    },
+    onMutate: async () => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: supportKeys.data() })
+
+      // Snapshot previous value
+      const previous = queryClient.getQueryData<SupportData>(supportKeys.data())
+
+      // Optimistic update
+      const willHeart = !hasHearted
+      queryClient.setQueryData<SupportData>(supportKeys.data(), {
+        count: willHeart ? count + 1 : count - 1,
+        hasHearted: willHeart,
+      })
+
+      // Trigger confetti and toast immediately
+      setIsAnimating(true)
+      if (willHeart) {
+        triggerConfetti()
+        toast.success('Thank you for your support! ❤️')
+      }
+
+      return { previous, willHeart }
+    },
+    onError: (_, __, context) => {
+      // Rollback on error
+      if (context?.previous) {
+        queryClient.setQueryData(supportKeys.data(), context.previous)
+      }
+      toast.error('Something went wrong')
+    },
+    onSettled: () => {
+      // Sync with server
+      queryClient.invalidateQueries({ queryKey: supportKeys.data() })
+      setTimeout(() => setIsAnimating(false), 300)
+    },
+  })
 
   const triggerConfetti = () => {
     if (!buttonRef.current) return
@@ -45,14 +120,14 @@ export function SupportHeartButton() {
     const x = (rect.left + rect.width / 2) / window.innerWidth
     const y = (rect.top + rect.height / 2) / window.innerHeight
 
-    const count = 200
+    const particleCount = 200
     const defaults = { origin: { x, y } }
 
     const fire = (particleRatio: number, opts: confetti.Options) => {
       confetti({
         ...defaults,
         ...opts,
-        particleCount: Math.floor(count * particleRatio)
+        particleCount: Math.floor(particleCount * particleRatio)
       })
     }
 
@@ -63,25 +138,7 @@ export function SupportHeartButton() {
     fire(0.1, { spread: 120, startVelocity: 45 })
   }
 
-  // Fetch initial count and heart status
-  useEffect(() => {
-    const fetchSupport = async () => {
-      setIsFetching(true)
-      try {
-        const token = cookies.getToken()
-        const result = await supportApi.getSupport(token || undefined) as SupportResponse
-        if (result.success) {
-          setCount(result.count ?? 0)
-          setHasHearted(result.hasHearted ?? false)
-        }
-      } finally {
-        setIsFetching(false)
-      }
-    }
-    fetchSupport()
-  }, [])
-
-  const handleClick = async () => {
+  const handleClick = () => {
     const token = cookies.getToken()
     
     // If not authenticated, redirect to login
@@ -93,52 +150,14 @@ export function SupportHeartButton() {
       return
     }
 
-    // Store previous state for rollback
-    const prevHasHearted = hasHearted
-    const prevCount = count
-
-    // Optimistic update - trigger immediately
-    const willHeart = !hasHearted
-    setHasHearted(willHeart)
-    setCount(willHeart ? count + 1 : count - 1)
-    setIsAnimating(true)
-
-    if (willHeart) {
-      triggerConfetti()
-      toast.success('Thank you for your support! ❤️')
-    }
-
-    setIsLoading(true)
-
-    try {
-      const result = await supportApi.toggleHeart(token) as SupportResponse
-      
-      if (result.success) {
-        // Sync with server response
-        setCount(result.count ?? (willHeart ? prevCount + 1 : prevCount - 1))
-        setHasHearted(result.hasHearted ?? willHeart)
-      } else {
-        // Rollback on error
-        setHasHearted(prevHasHearted)
-        setCount(prevCount)
-        toast.error('Something went wrong')
-      }
-    } catch {
-      // Rollback on error
-      setHasHearted(prevHasHearted)
-      setCount(prevCount)
-      toast.error('Failed to update')
-    } finally {
-      setIsLoading(false)
-      setTimeout(() => setIsAnimating(false), 300)
-    }
+    toggleMutation.mutate()
   }
 
   return (
     <motion.button
       ref={buttonRef}
       onClick={handleClick}
-      disabled={isLoading}
+      disabled={toggleMutation.isPending}
       className={cn(
         "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all cursor-pointer",
         "border hover:scale-105 active:scale-95",

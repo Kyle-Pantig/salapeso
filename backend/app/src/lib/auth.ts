@@ -4,7 +4,8 @@ import { randomBytes } from 'crypto'
 import prisma from './prisma'
 import { sendEmail, generateResetCode, getPasswordResetEmailHtml, generateVerificationToken, getEmailVerificationHtml } from './email'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+// Frontend URL for email links (set FRONTEND_URL in Railway)
+const APP_URL = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 // Generate a secure URL-safe token
 function generateResetToken(): string {

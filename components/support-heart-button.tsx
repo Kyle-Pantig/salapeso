@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -10,6 +10,9 @@ import confetti from 'canvas-confetti'
 import { supportApi } from '@/lib/api'
 import { cookies } from '@/lib/cookies'
 import { cn } from '@/lib/utils'
+
+// Debounce delay to prevent spam
+const DEBOUNCE_MS = 1000
 
 interface SupportData {
   count: number
@@ -46,6 +49,8 @@ export function SupportHeartButton() {
   const queryClient = useQueryClient()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [isAnimating, setIsAnimating] = useState(false)
+  const [isDebouncing, setIsDebouncing] = useState(false)
+  const lastClickTime = useRef(0)
 
   // Fetch support data with React Query
   const { data, isLoading: isFetching } = useQuery({
@@ -106,9 +111,16 @@ export function SupportHeartButton() {
       }
       toast.error('Something went wrong')
     },
+    onSuccess: (result) => {
+      // Sync with actual server data (only on success, not on every settle)
+      if (result.count !== undefined) {
+        queryClient.setQueryData<SupportData>(supportKeys.data(), {
+          count: result.count,
+          hasHearted: result.hasHearted ?? !hasHearted,
+        })
+      }
+    },
     onSettled: () => {
-      // Sync with server
-      queryClient.invalidateQueries({ queryKey: supportKeys.data() })
       setTimeout(() => setIsAnimating(false), 300)
     },
   })
@@ -138,7 +150,7 @@ export function SupportHeartButton() {
     fire(0.1, { spread: 120, startVelocity: 45 })
   }
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     const token = cookies.getToken()
     
     // If not authenticated, redirect to login
@@ -150,14 +162,32 @@ export function SupportHeartButton() {
       return
     }
 
-    toggleMutation.mutate()
-  }
+    // Debounce: prevent spam clicking
+    const now = Date.now()
+    if (now - lastClickTime.current < DEBOUNCE_MS) {
+      return // Ignore rapid clicks
+    }
+    lastClickTime.current = now
+    
+    // Prevent clicking while mutation is in progress
+    if (toggleMutation.isPending || isDebouncing) {
+      return
+    }
+
+    setIsDebouncing(true)
+    toggleMutation.mutate(undefined, {
+      onSettled: () => {
+        // Allow next click after debounce period
+        setTimeout(() => setIsDebouncing(false), DEBOUNCE_MS)
+      }
+    })
+  }, [router, toggleMutation, isDebouncing])
 
   return (
     <motion.button
       ref={buttonRef}
       onClick={handleClick}
-      disabled={toggleMutation.isPending}
+      disabled={toggleMutation.isPending || isDebouncing}
       className={cn(
         "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all cursor-pointer",
         "border hover:scale-105 active:scale-95",

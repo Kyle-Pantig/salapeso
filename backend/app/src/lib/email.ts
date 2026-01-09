@@ -1,13 +1,10 @@
-import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 
-// Create reusable transporter
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SMTP_EMAIL,
-    pass: process.env.SMTP_PASSWORD,
-  },
-})
+// Initialize Resend with API key
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+// Email sender address (verified domain)
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'SalaPeso <buildwithkyle@kylepantig.site>'
 
 interface SendEmailOptions {
   to: string
@@ -16,18 +13,31 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailOptions) {
+  if (!process.env.RESEND_API_KEY) {
+    console.error('❌ RESEND_API_KEY not configured')
+    return { success: false, error: 'Email service not configured' }
+  }
+
   try {
-    const info = await transporter.sendMail({
-      from: `"SalaPeso" <${process.env.SMTP_EMAIL}>`,
+    console.log(`📧 Sending email to ${to}...`)
+    
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
       to,
       subject,
       html,
     })
-    console.log('Email sent:', info.messageId)
-    return { success: true, messageId: info.messageId }
-  } catch (error) {
-    console.error('Email error:', error)
-    return { success: false, error }
+
+    if (error) {
+      console.error('❌ Resend error:', error)
+      return { success: false, error: error.message }
+    }
+
+    console.log('✅ Email sent:', data?.id)
+    return { success: true, messageId: data?.id }
+  } catch (error: any) {
+    console.error('❌ Email error:', error.message)
+    return { success: false, error: error.message }
   }
 }
 

@@ -18,10 +18,9 @@
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.90.1",
     "elysia": "latest",
-    "nodemailer": "^7.0.12"
+    "resend": "^6.7.0"
   },
   "devDependencies": {
-    "@types/nodemailer": "^7.0.4",
     "bun-types": "latest",
     "prisma": "^5.22.0",
     "tsx": "^4.21.0"

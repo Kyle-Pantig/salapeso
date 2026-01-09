@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart } from 'lucide-react'
+import { Heart, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import confetti from 'canvas-confetti'
 import { supportApi } from '@/lib/api'
 import { cookies } from '@/lib/cookies'
 import { cn } from '@/lib/utils'
@@ -30,19 +31,51 @@ function formatCount(num: number): string {
 
 export function SupportHeartButton() {
   const router = useRouter()
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const [count, setCount] = useState(0)
   const [hasHearted, setHasHearted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isFetching, setIsFetching] = useState(true)
   const [isAnimating, setIsAnimating] = useState(false)
+
+  const triggerConfetti = () => {
+    if (!buttonRef.current) return
+    
+    const rect = buttonRef.current.getBoundingClientRect()
+    const x = (rect.left + rect.width / 2) / window.innerWidth
+    const y = (rect.top + rect.height / 2) / window.innerHeight
+
+    const count = 200
+    const defaults = { origin: { x, y } }
+
+    const fire = (particleRatio: number, opts: confetti.Options) => {
+      confetti({
+        ...defaults,
+        ...opts,
+        particleCount: Math.floor(count * particleRatio)
+      })
+    }
+
+    fire(0.25, { spread: 26, startVelocity: 55 })
+    fire(0.2, { spread: 60 })
+    fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 })
+    fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 })
+    fire(0.1, { spread: 120, startVelocity: 45 })
+  }
 
   // Fetch initial count and heart status
   useEffect(() => {
     const fetchSupport = async () => {
-      const token = cookies.getToken()
-      const result = await supportApi.getSupport(token || undefined) as SupportResponse
-      if (result.success) {
-        setCount(result.count ?? 0)
-        setHasHearted(result.hasHearted ?? false)
+      setIsFetching(true)
+      try {
+        const token = cookies.getToken()
+        const result = await supportApi.getSupport(token || undefined) as SupportResponse
+        if (result.success) {
+          setCount(result.count ?? 0)
+          setHasHearted(result.hasHearted ?? false)
+        }
+      } finally {
+        setIsFetching(false)
       }
     }
     fetchSupport()
@@ -60,23 +93,40 @@ export function SupportHeartButton() {
       return
     }
 
-    setIsLoading(true)
+    // Store previous state for rollback
+    const prevHasHearted = hasHearted
+    const prevCount = count
+
+    // Optimistic update - trigger immediately
+    const willHeart = !hasHearted
+    setHasHearted(willHeart)
+    setCount(willHeart ? count + 1 : count - 1)
     setIsAnimating(true)
+
+    if (willHeart) {
+      triggerConfetti()
+      toast.success('Thank you for your support! ❤️')
+    }
+
+    setIsLoading(true)
 
     try {
       const result = await supportApi.toggleHeart(token) as SupportResponse
       
       if (result.success) {
-        setCount(result.count ?? 0)
-        setHasHearted(result.hasHearted ?? false)
-        
-        if (result.hasHearted) {
-          toast.success('Thank you for your support! ❤️')
-        }
+        // Sync with server response
+        setCount(result.count ?? (willHeart ? prevCount + 1 : prevCount - 1))
+        setHasHearted(result.hasHearted ?? willHeart)
       } else {
+        // Rollback on error
+        setHasHearted(prevHasHearted)
+        setCount(prevCount)
         toast.error('Something went wrong')
       }
     } catch {
+      // Rollback on error
+      setHasHearted(prevHasHearted)
+      setCount(prevCount)
       toast.error('Failed to update')
     } finally {
       setIsLoading(false)
@@ -86,6 +136,7 @@ export function SupportHeartButton() {
 
   return (
     <motion.button
+      ref={buttonRef}
       onClick={handleClick}
       disabled={isLoading}
       className={cn(
@@ -113,7 +164,11 @@ export function SupportHeartButton() {
           />
         </motion.div>
       </AnimatePresence>
-      <span className="font-medium tabular-nums">{formatCount(count)}</span>
+      {isFetching ? (
+        <Loader2 className="size-3 animate-spin" />
+      ) : (
+        <span className="font-medium tabular-nums">{formatCount(count)}</span>
+      )}
     </motion.button>
   )
 }

@@ -114,7 +114,15 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
         return { success: false, error: 'Invalid credentials' }
       }
 
-      // Check if email is verified
+      // Verify password FIRST (before revealing verification status)
+      const isValid = await verifyPassword(password, user.password)
+
+      if (!isValid) {
+        set.status = 401
+        return { success: false, error: 'Invalid credentials' }
+      }
+
+      // Check if email is verified (only after password is confirmed correct)
       if (!user.emailVerified) {
         set.status = 403
         return { 
@@ -123,14 +131,6 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
           requiresVerification: true,
           email: user.email 
         }
-      }
-
-      // Verify password
-      const isValid = await verifyPassword(password, user.password)
-
-      if (!isValid) {
-        set.status = 401
-        return { success: false, error: 'Invalid credentials' }
       }
 
       // Generate token

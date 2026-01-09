@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 
 import { cn } from "@/lib/utils"
 import { authApi } from "@/lib/api"
@@ -39,11 +40,11 @@ export function ResetPasswordForm({
   token,
   ...props
 }: ResetPasswordFormProps) {
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [codeVerified, setCodeVerified] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
   const [verifiedCode, setVerifiedCode] = useState('') // Track which code was already attempted
+  const [codeError, setCodeError] = useState(false) // For input styling only
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
@@ -63,12 +64,12 @@ export function ResetPasswordForm({
 
   const code = watch("code")
 
-  // Clear error when user starts typing a different code
+  // Clear error styling when user starts typing a different code
   useEffect(() => {
-    if (code !== verifiedCode && error) {
-      setError('')
+    if (code !== verifiedCode && codeError) {
+      setCodeError(false)
     }
-  }, [code, verifiedCode, error])
+  }, [code, verifiedCode, codeError])
 
   // Auto-verify code when 6 digits entered
   useEffect(() => {
@@ -80,36 +81,50 @@ export function ResetPasswordForm({
 
   const verifyCode = async (codeValue: string) => {
     setIsVerifying(true)
-    setError('')
+    setCodeError(false)
     setVerifiedCode(codeValue) // Mark this code as attempted
 
     try {
       const result = await authApi.verifyResetCode(token, codeValue)
       if (result.success) {
         setCodeVerified(true)
+        toast.success('Code verified!', {
+          description: 'Now set your new password.',
+        })
       } else {
-        setError(result.error || 'Invalid or expired code')
+        setCodeError(true)
+        toast.error('Invalid code', {
+          description: result.error || 'Please check your code and try again.',
+        })
       }
     } catch {
-      setError('Something went wrong. Please try again.')
+      setCodeError(true)
+      toast.error('Something went wrong', {
+        description: 'Please try again later.',
+      })
     } finally {
       setIsVerifying(false)
     }
   }
 
   const onSubmit = async (formData: ResetPasswordFormData) => {
-    setError('')
-
     try {
       const result = await authApi.resetPassword(token, formData.code, formData.password)
 
       if (result.success) {
         setSuccess(true)
+        toast.success('Password reset successful!', {
+          description: 'You can now log in with your new password.',
+        })
       } else {
-        setError(result.error || 'Something went wrong. Please try again.')
+        toast.error('Failed to reset password', {
+          description: result.error || 'Please try again.',
+        })
       }
     } catch {
-      setError('Something went wrong. Please try again.')
+      toast.error('Something went wrong', {
+        description: 'Please try again later.',
+      })
     }
   }
 
@@ -150,9 +165,9 @@ export function ResetPasswordForm({
                   disabled={isSubmitting}
                   className={cn(
                     "text-center text-2xl tracking-widest font-mono",
-                    error && "border-destructive ring-destructive focus-visible:ring-destructive"
+                    codeError && "border-destructive ring-destructive focus-visible:ring-destructive"
                   )}
-                  aria-invalid={!!errors.code || !!error}
+                  aria-invalid={!!errors.code || codeError}
                 />
                 {isVerifying && (
                   <p className="text-sm text-muted-foreground flex items-center justify-center mt-1">
@@ -218,12 +233,6 @@ export function ResetPasswordForm({
                   )}
                 </Field>
               </>
-            )}
-
-            {error && (
-              <p className="text-sm text-destructive text-center">
-                {error}
-              </p>
             )}
 
             {codeVerified && (

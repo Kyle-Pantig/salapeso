@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "sonner";
 import { GoogleOAuthProvider } from "@/components/providers/GoogleOAuthProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import "./globals.css";
@@ -109,6 +110,7 @@ export default function RootLayout({
           >
             <GoogleOAuthProvider>
               {children}
+              <Toaster position="top-right" richColors closeButton />
             </GoogleOAuthProvider>
           </ThemeProvider>
         </QueryProvider>

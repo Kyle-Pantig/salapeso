@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
 
 import { cn } from "@/lib/utils"
 import { authApi } from "@/lib/api"
@@ -33,14 +34,12 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
   const router = useRouter()
   const { clearCache } = useQueryCache()
-  const [error, setError] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [requiresVerification, setRequiresVerification] = useState(false)
   const [unverifiedEmail, setUnverifiedEmail] = useState('')
   const [resendLoading, setResendLoading] = useState(false)
-  const [resendMessage, setResendMessage] = useState('')
   const isGoogleConfigured = useGoogleOAuthConfig()
 
   const {
@@ -66,7 +65,6 @@ export function LoginForm({
   }, [setValue])
 
   const onSubmit = async (formData: LoginFormData) => {
-    setError('')
     setRequiresVerification(false)
 
     // Save or clear remembered email
@@ -81,29 +79,43 @@ export function LoginForm({
     if (data.success && data.token && data.user) {
       clearCache() // Clear old user's cached data
       cookies.setAuth(data.token, data.user)
+      toast.success('Welcome back!', {
+        description: `Logged in as ${data.user.name || data.user.email}`,
+      })
       router.push('/dashboard')
       router.refresh()
     } else if (data.requiresVerification) {
       setRequiresVerification(true)
       setUnverifiedEmail(data.email || formData.email)
     } else {
-      setError(data.error || 'Login failed')
+      toast.error(data.error === 'Invalid credentials' 
+        ? 'Invalid credentials' 
+        : 'Login failed', {
+        description: data.error === 'Invalid credentials'
+          ? 'The email or password you entered is incorrect.'
+          : 'Something went wrong. Please try again.',
+      })
     }
   }
 
   const handleResendVerification = async () => {
     setResendLoading(true)
-    setResendMessage('')
     
     try {
       const result = await authApi.resendVerification(unverifiedEmail)
       if (result.success) {
-        setResendMessage('Verification email sent!')
+        toast.success('Verification email sent!', {
+          description: 'Please check your inbox.',
+        })
       } else {
-        setResendMessage(result.error || 'Failed to resend')
+        toast.error('Failed to resend', {
+          description: result.error || 'Please try again.',
+        })
       }
     } catch {
-      setResendMessage('Something went wrong')
+      toast.error('Something went wrong', {
+        description: 'Please try again later.',
+      })
     } finally {
       setResendLoading(false)
     }
@@ -143,24 +155,13 @@ export function LoginForm({
             >
               {resendLoading ? 'Sending...' : 'Resend verification email'}
             </Button>
-            {resendMessage && (
-              <p className={cn(
-                "text-sm",
-                resendMessage.includes('sent') ? 'text-green-600' : 'text-destructive'
-              )}>
-                {resendMessage}
-              </p>
-            )}
           </div>
 
           <Field>
             <Button 
               variant="ghost" 
               className="w-full"
-              onClick={() => {
-                setRequiresVerification(false)
-                setResendMessage('')
-              }}
+              onClick={() => setRequiresVerification(false)}
             >
               Try a different account
             </Button>
@@ -195,7 +196,7 @@ export function LoginForm({
             <>
               <Field>
                 <GoogleLoginButton 
-                  onError={setError} 
+                  onError={(error) => toast.error('Google login failed', { description: error })} 
                   onLoadingChange={setGoogleLoading}
                   disabled={isSubmitting}
                 />
@@ -274,20 +275,9 @@ export function LoginForm({
             </Link>
           </div>
 
-          <div className="space-y-3 -mt-1">
-            {error && (
-              <p className="text-sm text-destructive text-center">
-                {error === 'Invalid credentials' 
-                  ? 'The email or password you entered is incorrect. Please try again.'
-                  : 'Something went wrong. Please try again later.'
-                }
-              </p>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isSubmitting || googleLoading}>
-              {isSubmitting ? 'Logging in...' : 'Log In'}
-            </Button>
-          </div>
+          <Button type="submit" className="w-full -mt-1" disabled={isSubmitting || googleLoading}>
+            {isSubmitting ? 'Logging in...' : 'Log In'}
+          </Button>
         </FieldGroup>
       </form>
       <FieldDescription className="px-6 text-center">

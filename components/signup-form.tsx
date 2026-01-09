@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
 
 import { cn } from "@/lib/utils"
 import { authApi } from "@/lib/api"
@@ -28,14 +29,12 @@ export function SignupForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter()
-  const [error, setError] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [verificationSent, setVerificationSent] = useState(false)
   const [userEmail, setUserEmail] = useState('')
   const [resendLoading, setResendLoading] = useState(false)
-  const [resendMessage, setResendMessage] = useState('')
   const isGoogleConfigured = useGoogleOAuthConfig()
 
   const {
@@ -53,8 +52,6 @@ export function SignupForm({
   })
 
   const onSubmit = async (formData: SignupFormData) => {
-    setError('')
-
     const data = await authApi.signup(formData.email, formData.password, formData.name || undefined)
 
     if (data.success) {
@@ -62,30 +59,45 @@ export function SignupForm({
         // Show verification sent message
         setVerificationSent(true)
         setUserEmail(data.email || formData.email)
+        toast.success('Account created!', {
+          description: 'Please check your email to verify your account.',
+        })
       } else if (data.token && data.user) {
         // Direct login (shouldn't happen now, but keeping for safety)
         cookies.setAuth(data.token, data.user)
+        toast.success('Welcome to SalaPeso!')
         router.push('/dashboard')
         router.refresh()
       }
     } else {
-      setError(data.error || 'Signup failed')
+      toast.error(data.error === 'User already exists' 
+        ? 'Account already exists' 
+        : 'Signup failed', {
+        description: data.error === 'User already exists'
+          ? 'An account with this email already exists. Please log in instead.'
+          : 'Something went wrong. Please try again.',
+      })
     }
   }
 
   const handleResendVerification = async () => {
     setResendLoading(true)
-    setResendMessage('')
     
     try {
       const result = await authApi.resendVerification(userEmail)
       if (result.success) {
-        setResendMessage('Verification email sent!')
+        toast.success('Verification email sent!', {
+          description: 'Please check your inbox.',
+        })
       } else {
-        setResendMessage(result.error || 'Failed to resend')
+        toast.error('Failed to resend', {
+          description: result.error || 'Please try again.',
+        })
       }
     } catch {
-      setResendMessage('Something went wrong')
+      toast.error('Something went wrong', {
+        description: 'Please try again later.',
+      })
     } finally {
       setResendLoading(false)
     }
@@ -135,14 +147,6 @@ export function SignupForm({
             >
               {resendLoading ? 'Sending...' : 'Resend verification email'}
             </Button>
-            {resendMessage && (
-              <p className={cn(
-                "text-sm",
-                resendMessage.includes('sent') ? 'text-green-600' : 'text-destructive'
-              )}>
-                {resendMessage}
-              </p>
-            )}
           </div>
 
           <Field>
@@ -183,7 +187,7 @@ export function SignupForm({
             <>
               <Field>
                 <GoogleLoginButton 
-                  onError={setError} 
+                  onError={(error) => toast.error('Google signup failed', { description: error })} 
                   onLoadingChange={setGoogleLoading}
                   disabled={isSubmitting}
                   text="Continue with Google"
@@ -278,12 +282,6 @@ export function SignupForm({
               <p className="text-sm text-destructive mt-1">{errors.confirmPassword.message}</p>
             )}
           </Field>
-
-          {error && (
-            <p className="text-sm text-destructive text-center">
-              Something went wrong. Please try again later.
-            </p>
-          )}
 
           <Field>
             <Button type="submit" className="w-full" disabled={isSubmitting || googleLoading}>

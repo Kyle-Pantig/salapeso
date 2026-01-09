@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 
 import { cn } from "@/lib/utils"
 import { authApi } from "@/lib/api"
@@ -33,12 +34,10 @@ export function ForgotPasswordForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter()
-  const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [resetToken, setResetToken] = useState('')
   const [sentEmail, setSentEmail] = useState('')
   const [isResending, setIsResending] = useState(false)
-  const [resendSuccess, setResendSuccess] = useState(false)
   const [cooldownSeconds, setCooldownSeconds] = useState(0)
 
   // Start cooldown timer when code is first sent
@@ -75,8 +74,6 @@ export function ForgotPasswordForm({
   })
 
   const onSubmit = async (formData: ForgotPasswordFormData) => {
-    setError('')
-
     try {
       const result = await authApi.forgotPassword(formData.email) as { success: boolean; token?: string; error?: string }
 
@@ -85,11 +82,18 @@ export function ForgotPasswordForm({
         setSentEmail(formData.email)
         setSuccess(true)
         startCooldown() // Start 2-minute cooldown
+        toast.success('Reset code sent!', {
+          description: 'Please check your email inbox.',
+        })
       } else {
-        setError(result.error || 'Something went wrong. Please try again.')
+        toast.error('Failed to send reset code', {
+          description: result.error || 'Please try again.',
+        })
       }
     } catch {
-      setError('Something went wrong. Please try again.')
+      toast.error('Something went wrong', {
+        description: 'Please try again later.',
+      })
     }
   }
 
@@ -101,21 +105,23 @@ export function ForgotPasswordForm({
     if (cooldownSeconds > 0) return // Prevent resend during cooldown
     
     setIsResending(true)
-    setError('')
-    setResendSuccess(false)
 
     try {
       const result = await authApi.resendResetCode(resetToken)
       if (result.success) {
-        setResendSuccess(true)
         startCooldown() // Restart 2-minute cooldown
-        // Hide success message after 3 seconds
-        setTimeout(() => setResendSuccess(false), 3000)
+        toast.success('New code sent!', {
+          description: 'Please check your email.',
+        })
       } else {
-        setError(result.error || 'Failed to resend code')
+        toast.error('Failed to resend code', {
+          description: result.error || 'Please try again.',
+        })
       }
     } catch {
-      setError('Something went wrong. Please try again.')
+      toast.error('Something went wrong', {
+        description: 'Please try again later.',
+      })
     } finally {
       setIsResending(false)
     }
@@ -155,12 +161,6 @@ export function ForgotPasswordForm({
                 <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
               )}
             </Field>
-
-            {error && (
-              <p className="text-sm text-destructive text-center">
-                {error}
-              </p>
-            )}
 
             <Field>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -206,14 +206,8 @@ export function ForgotPasswordForm({
             </Button>
           </Field>
 
-          {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
-          )}
-
           <FieldDescription className="text-center">
-            {resendSuccess ? (
-              <span className="text-green-600">New code sent! Check your email.</span>
-            ) : cooldownSeconds > 0 ? (
+            {cooldownSeconds > 0 ? (
               <span className="text-muted-foreground">
                 Resend code in {formatTime(cooldownSeconds)}
               </span>

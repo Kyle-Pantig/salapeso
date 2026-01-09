@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { toast } from 'sonner'
 import { authApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,6 +25,9 @@ function VerifyEmailContent() {
     if (!token) {
       setStatus('error')
       setMessage('Invalid verification link. No token provided.')
+      toast.error('Invalid link', {
+        description: 'No verification token provided.',
+      })
       return
     }
 
@@ -34,13 +38,22 @@ function VerifyEmailContent() {
         if (result.success) {
           setStatus('success')
           setMessage(result.message || 'Your email has been verified successfully!')
+          toast.success('Email verified!', {
+            description: 'You can now log in to your account.',
+          })
         } else {
           setStatus('error')
           setMessage(result.error || 'Failed to verify email')
+          toast.error('Verification failed', {
+            description: result.error || 'Please try again or request a new link.',
+          })
         }
       } catch {
         setStatus('error')
         setMessage('Something went wrong. Please try again.')
+        toast.error('Something went wrong', {
+          description: 'Please try again later.',
+        })
       }
     }
 

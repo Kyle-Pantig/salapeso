@@ -192,10 +192,10 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 md:py-32 scroll-mt-20">
+      <section id="how-it-works" className="py-12 md:py-20 scroll-mt-20">
         <MaxWidthLayout>
           <motion.div
-            className="text-center mb-16"
+            className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -216,9 +216,9 @@ export default function Home() {
             viewport={{ once: true }}
             variants={staggerContainer}
           >
-            <StepCard number={1} title="Create a Goal" description="Set a target amount and give your goal a name" delay={0} />
-            <StepCard number={2} title="Log Your Savings" description="Add entries whenever you save money" delay={0.1} />
-            <StepCard number={3} title="Watch It Grow" description="Track your progress and celebrate milestones" delay={0.2} />
+            <StepCard number={1} title="Create a Goal" description="Set a target amount and give your goal a name" image="/SalaPesoImages/create.png" delay={0} />
+            <StepCard number={2} title="Log Your Savings" description="Add entries whenever you save money" image="/SalaPesoImages/log.png" delay={0.1} />
+            <StepCard number={3} title="Watch It Grow" description="Track your progress and celebrate milestones" image="/SalaPesoImages/watch.png" delay={0.2} />
           </motion.div>
         </MaxWidthLayout>
       </section>
@@ -353,11 +353,13 @@ function StepCard({
   number,
   title,
   description,
+  image,
   delay = 0,
 }: {
   number: number
   title: string
   description: string
+  image?: string
   delay?: number
 }) {
   return (
@@ -366,13 +368,33 @@ function StepCard({
       transition={{ duration: 0.5, delay }}
       className="text-center"
     >
-      <motion.div
-        className="size-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4 text-2xl font-bold"
-        whileHover={{ scale: 1.1, rotate: 5 }}
-        transition={{ type: "spring", stiffness: 400 }}
-      >
-        {number}
-      </motion.div>
+      {image ? (
+        <div className="relative mb-4">
+          <motion.div
+            className="relative w-24 h-24 md:w-28 md:h-28 mx-auto"
+            whileHover={{ scale: 1.05, y: -5 }}
+            transition={{ type: "spring", stiffness: 400 }}
+          >
+            <Image
+              src={image}
+              alt={title}
+              fill
+              className="object-contain"
+            />
+          </motion.div>
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-md">
+            {number}
+          </div>
+        </div>
+      ) : (
+        <motion.div
+          className="size-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4 text-2xl font-bold"
+          whileHover={{ scale: 1.1, rotate: 5 }}
+          transition={{ type: "spring", stiffness: 400 }}
+        >
+          {number}
+        </motion.div>
+      )}
       <h3 className="font-semibold text-lg mb-2">{title}</h3>
       <p className="text-muted-foreground text-sm">{description}</p>
     </motion.div>

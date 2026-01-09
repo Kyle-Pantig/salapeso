@@ -1,13 +1,45 @@
 import nodemailer from 'nodemailer'
 
-// Create reusable transporter
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SMTP_EMAIL,
-    pass: process.env.SMTP_PASSWORD,
-  },
-})
+// Gmail SMTP configuration
+// IMPORTANT: Use App Password, NOT your regular Gmail password!
+// 1. Enable 2-Factor Authentication on your Google account
+// 2. Go to https://myaccount.google.com/apppasswords
+// 3. Generate an App Password for "Mail"
+// 4. Use that 16-character password as SMTP_PASSWORD
+
+const createTransporter = () => {
+  const email = process.env.SMTP_EMAIL
+  const password = process.env.SMTP_PASSWORD
+
+  if (!email || !password) {
+    console.warn('⚠️ SMTP_EMAIL or SMTP_PASSWORD not set - emails will not be sent')
+    return null
+  }
+
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use TLS
+    auth: {
+      user: email,
+      pass: password,
+    },
+    tls: {
+      // Required for some environments
+      rejectUnauthorized: false,
+    },
+  })
+}
+
+// Create transporter lazily
+let transporter: nodemailer.Transporter | null = null
+
+const getTransporter = () => {
+  if (!transporter) {
+    transporter = createTransporter()
+  }
+  return transporter
+}
 
 interface SendEmailOptions {
   to: string
@@ -16,18 +48,36 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailOptions) {
+  const transport = getTransporter()
+  
+  if (!transport) {
+    console.error('Email not configured - SMTP_EMAIL and SMTP_PASSWORD required')
+    return { success: false, error: 'Email not configured' }
+  }
+
   try {
-    const info = await transporter.sendMail({
+    console.log(`📧 Sending email to ${to}...`)
+    
+    const info = await transport.sendMail({
       from: `"SalaPeso" <${process.env.SMTP_EMAIL}>`,
       to,
       subject,
       html,
     })
-    console.log('Email sent:', info.messageId)
+    
+    console.log('✅ Email sent:', info.messageId)
     return { success: true, messageId: info.messageId }
-  } catch (error) {
-    console.error('Email error:', error)
-    return { success: false, error }
+  } catch (error: any) {
+    console.error('❌ Email error:', error.message)
+    console.error('Full error:', JSON.stringify(error, null, 2))
+    
+    // Provide helpful error messages
+    if (error.code === 'EAUTH') {
+      console.error('🔑 Authentication failed - make sure you are using an App Password, not your regular Gmail password')
+      console.error('   Generate one at: https://myaccount.google.com/apppasswords')
+    }
+    
+    return { success: false, error: error.message }
   }
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useInView } from 'framer-motion'
 
 interface AnimatedNumberProps {
@@ -18,21 +18,37 @@ export function AnimatedNumber({
 }: AnimatedNumberProps) {
   const ref = useRef<HTMLSpanElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-50px' })
-  const [displayValue, setDisplayValue] = useState(0)
-  const hasAnimated = useRef(false)
+  const [displayValue, setDisplayValue] = useState(value)
+  const previousValue = useRef(value)
+  const animationRef = useRef<number | null>(null)
 
-  const animate = useCallback(() => {
-    if (hasAnimated.current) return
-    hasAnimated.current = true
+  useEffect(() => {
+    // Cancel any ongoing animation
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+    }
 
-    const startTime = Date.now()
-    const startValue = 0
+    // If not in view yet or value is 0, just set directly
+    if (!isInView) {
+      setDisplayValue(value)
+      previousValue.current = value
+      return
+    }
+
+    const startValue = previousValue.current
     const endValue = value
+    const startTime = Date.now()
+
+    // If values are the same, no need to animate
+    if (startValue === endValue) return
+
+    // Quick animation for subsequent updates (300ms), longer for initial (duration)
+    const animDuration = previousValue.current === 0 ? duration : 300
 
     const step = () => {
       const now = Date.now()
       const elapsed = now - startTime
-      const progress = Math.min(elapsed / duration, 1)
+      const progress = Math.min(elapsed / animDuration, 1)
       
       // Easing function for smooth animation
       const easeOutQuart = 1 - Math.pow(1 - progress, 4)
@@ -41,20 +57,20 @@ export function AnimatedNumber({
       setDisplayValue(Math.round(current))
 
       if (progress < 1) {
-        requestAnimationFrame(step)
+        animationRef.current = requestAnimationFrame(step)
+      } else {
+        previousValue.current = endValue
       }
     }
 
-    requestAnimationFrame(step)
-  }, [value, duration])
+    animationRef.current = requestAnimationFrame(step)
 
-  useEffect(() => {
-    if (isInView && value > 0) {
-      animate()
-    } else if (value === 0) {
-      setDisplayValue(0)
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
     }
-  }, [isInView, value, animate])
+  }, [isInView, value, duration])
 
   return (
     <span ref={ref} className={className}>

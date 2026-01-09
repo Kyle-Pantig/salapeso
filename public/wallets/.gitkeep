@@ -1,0 +1,12 @@
+# Wallet Logo Files
+
+Place your wallet/bank logos here.
+Each logo should be named according to its slug (e.g., gcash.png, bpi.png)
+
+Required logos:
+- E-Wallets: gcash.png, maya.png, grabpay.png, shopeepay.png, coins.png, paypal.png
+- Banks: bpi.png, bdo.png, metrobank.png, landbank.png, unionbank.png, chinabank.png, pnb.png, securitybank.png, rcbc.png, eastwest.png, cimb.png, ing.png, gotyme.png, tonik.png, seabank.png, maya-bank.png
+- Other: cash.png, piggy-bank.png, other.png
+
+Recommended size: 64x64 or 128x128 PNG with transparent background
+

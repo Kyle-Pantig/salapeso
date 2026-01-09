@@ -50,7 +50,7 @@ export const savingsRoutes = new Elysia({ prefix: '/savings' })
             take: 5, // last 5 entries
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'asc' }, // oldest first, new goals appear at end
       })
 
       return { success: true, data: goals }

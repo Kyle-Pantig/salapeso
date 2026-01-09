@@ -33,13 +33,16 @@ export function AddEntryModal({ isOpen, onClose, onSubmit, goal, mode, isLoading
   const handleSubmit = async () => {
     if (!amount || parseFloat(amount) <= 0) return
 
+    const finalAmount = mode === 'withdraw' ? -parseFloat(amount) : parseFloat(amount)
+    
+    // Close immediately (optimistic UI)
+    handleClose()
+    
     try {
-      const finalAmount = mode === 'withdraw' ? -parseFloat(amount) : parseFloat(amount)
       await onSubmit({
         amount: finalAmount,
         note: note || undefined,
       })
-      handleClose()
     } catch (error) {
       console.error('Failed to add entry:', error)
     }

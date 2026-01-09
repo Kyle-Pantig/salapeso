@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { SavingsGoal } from '@/types/savings'
 import { motion } from 'framer-motion'
@@ -19,6 +19,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 
+// Track wallet IDs that have been animated (persists across re-renders)
+const animatedWallets = new Set<string>()
+
 interface SavingsCardProps {
   goal: SavingsGoal
   onDeposit: (goal: SavingsGoal) => void
@@ -32,6 +35,14 @@ interface SavingsCardProps {
 export function SavingsCard({ goal, onDeposit, onWithdraw, onDelete, onEdit, onViewHistory, index = 0 }: SavingsCardProps) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  
+  // Use walletId to track animations (stable across temp->real ID change)
+  const shouldAnimate = !animatedWallets.has(goal.walletId)
+  
+  // Mark as animated after first render
+  useEffect(() => {
+    animatedWallets.add(goal.walletId)
+  }, [goal.walletId])
 
   const progress = goal.targetAmount 
     ? Math.min((Number(goal.currentAmount) / Number(goal.targetAmount)) * 100, 100)
@@ -71,9 +82,10 @@ export function SavingsCard({ goal, onDeposit, onWithdraw, onDelete, onEdit, onV
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={shouldAnimate ? { opacity: 0, y: 20 } : false}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
+      transition={{ delay: shouldAnimate ? index * 0.05 : 0 }}
+      layout
     >
       <Card className={cn(
         'group relative transition-all hover:shadow-lg hover:border-primary/20 py-0',
@@ -170,9 +182,9 @@ export function SavingsCard({ goal, onDeposit, onWithdraw, onDelete, onEdit, onV
 
           {/* Goal name & Balance */}
           <motion.div 
-            initial={{ opacity: 0 }}
+            initial={shouldAnimate ? { opacity: 0 } : false}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 + index * 0.05 }}
+            transition={{ delay: shouldAnimate ? 0.1 + index * 0.05 : 0 }}
             className="mb-4"
           >
             <p className="text-sm font-medium text-muted-foreground mb-1">
@@ -194,9 +206,9 @@ export function SavingsCard({ goal, onDeposit, onWithdraw, onDelete, onEdit, onV
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               {progress !== null && (
                 <motion.div
-                  initial={{ width: 0 }}
+                  initial={shouldAnimate ? { width: 0 } : false}
                   animate={{ width: `${progress}%` }}
-                  transition={{ delay: 0.3 + index * 0.05, duration: 0.5 }}
+                  transition={{ delay: shouldAnimate ? 0.3 + index * 0.05 : 0, duration: shouldAnimate ? 0.5 : 0.2 }}
                   className={cn(
                     'h-full rounded-full',
                     progress >= 100 ? 'bg-green-500' : 'bg-primary'

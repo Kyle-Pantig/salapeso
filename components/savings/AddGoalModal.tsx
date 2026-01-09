@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils'
 interface AddGoalModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (data: { walletId: string; name?: string; targetAmount?: number; initialAmount?: number }) => Promise<void>
+  onSubmit: (data: { walletId: string; wallet?: Wallet; name?: string; targetAmount?: number; initialAmount?: number }) => Promise<void>
   wallets: Wallet[]
   existingWalletIds: string[]
   isLoading?: boolean
@@ -49,14 +49,19 @@ export function AddGoalModal({ isOpen, onClose, onSubmit, wallets, existingWalle
   const handleSubmit = async () => {
     if (!selectedWallet) return
 
+    const submitData = {
+      walletId: selectedWallet.id,
+      wallet: selectedWallet,
+      name: goalName || 'Savings',
+      targetAmount: targetAmount ? parseFloat(targetAmount) : undefined,
+      initialAmount: initialAmount ? parseFloat(initialAmount) : undefined,
+    }
+    
+    // Close immediately (optimistic UI)
+    handleClose()
+    
     try {
-      await onSubmit({
-        walletId: selectedWallet.id,
-        name: goalName || 'Savings',
-        targetAmount: targetAmount ? parseFloat(targetAmount) : undefined,
-        initialAmount: initialAmount ? parseFloat(initialAmount) : undefined,
-      })
-      handleClose()
+      await onSubmit(submitData)
     } catch (error) {
       console.error('Failed to create goal:', error)
     }
